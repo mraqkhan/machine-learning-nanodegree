@@ -23,7 +23,7 @@ class LearningAgent(Agent):
         ## TO DO ##
         ###########
         # Set any additional class parameters as needed
-        self.n_trials=1
+        self.trial = 0
 
 
     def reset(self, destination=None, testing=False):
@@ -40,79 +40,20 @@ class LearningAgent(Agent):
         # Update epsilon using a decay function of your choice
         # Update additional class parameters as needed
         # If 'testing' is True, set epsilon and alpha to 0
-        # self.epsilon -= 0.05
-        
-        self.n_trials += 1
-        # Method 1
-        a=0.80
-        # a=0.95
-        self.epsilon = a ** (self.n_trials-1)
-        # Method 2
-        # self.epsilon = 1/ (self.n_trials**2)
-        # Method 3
-        # a=0.2
-        # self.epsilon = math.exp(-a*self.n_trials)
-        # self.alpha = math.exp(-a*self.n_trials*0.5)
-        # Method 4, This is terrible
-        # self.epsilon = math.cos(a*self.n_trials)
+        self.trial += 1
 
-        if testing:
+        if(testing == True):
             self.epsilon = 0
             self.alpha = 0
+        else:
+            # for the first 100 trials, adopt an eager-learning approach
+            # then switch to a more natural/random one
+            if (self.trial < 100):
+                self.epsilon = self.epsilon - 0.005
+            else:
+                self.epsilon = math.cos(random.random()*self.trial)
 
         return None
-
-    def simplify_state(self,state):
-        '''
-        simplify_state() function is written by JiyaoL, to simplify 96 states to 8 states or 7 states
-        '''
-        #Reduce number of possible states from 96 to 8
-
-        if state[1] == 'green':
-            if state[0] == 'forward':
-                s_state=('forward','green',None, None)
-            elif state[0] == 'right':
-                s_state=('right','green',None, None)
-            elif state[0] == 'left':
-                if state[3] == 'forward' or state[3] == 'right':
-                    s_state=('left','green',None,'oncoming')
-                elif state[3] == 'left' or state[3] == None:
-                    s_state=('left','green',None, None)
-        elif state[1] == 'red':
-            if state[0] == 'forward':
-                s_state=('forward','red',None,None)
-            elif state[0] == 'left':
-                s_state=('left','red',None,None)
-            elif state[0] == 'right':
-                if state[2] == 'left' or state[2] == 'forward':
-                    s_state=('right','red','left',None)
-                elif state[2] == 'right' or state[2] == None:
-                    s_state=('right','red',None,None)
-        
-
-        # #Reduce number of possible states from 96 to 7
-
-        # if state[1] == 'green':
-        #     if state[0] == 'forward':
-        #         s_state=('forward','green',None, None)
-        #     elif state[0] == 'right':
-        #         s_state=('right','green',None, None)
-        #     elif state[0] == 'left':
-        #         if state[3] == 'forward' or state[3] == 'right':
-        #             s_state=('left','green',None,'oncoming')
-        #         elif state[3] == 'left' or state[3] == None:
-        #             s_state=('left','green',None, None)
-        # elif state[1] == 'red':
-        #     if state[0] == 'forward' or state[0] == 'left':
-        #         s_state=('forward_left','red',None,None)
-        #     elif state[0] == 'right':
-        #         if state[2] == 'left' or state[2] == 'forward':
-        #             s_state=('right','red','left',None)
-        #         elif state[2] == 'right' or state[2] == None:
-        #             s_state=('right','red',None,None)
-        
-
-        return s_state
 
     def build_state(self):
         """ The build_state function is called when the agent requests data from the 
@@ -127,22 +68,9 @@ class LearningAgent(Agent):
         ########### 
         ## TO DO ##
         ###########
-        # Set 'state' as a tuple of relevant data for the agent
-        # When learning, check if the state is in the Q-table
-        #   If it is not, create a dictionary in the Q-table for the current 'state'
-        #   For each action, set the Q-value for the state-action pair to 0
-        
-        # state = None
-        state = (waypoint,inputs['light'],inputs['left'],inputs['oncoming'])
-
-        s_state=self.simplify_state(state)
-        # s_state=state
-
-        if self.learning:
-            if s_state not in self.Q:
-                self.Q[s_state] = dict()
-                for act in self.valid_actions:
-                    self.Q[s_state][act]=0.0
+        # Set 'state' as a tuple of relevant data for the agent        
+        # inputs["right"] is ignored, since there's no right lane.
+        state = (inputs["light"], inputs["oncoming"], inputs["left"], waypoint)
 
         return state
 
@@ -156,25 +84,9 @@ class LearningAgent(Agent):
         ###########
         # Calculate the maximum Q-value of all actions for a given state
 
-        # maxQ = None
-        s_state=self.simplify_state(state)
-        # s_state=state
+        maxQ = max(self.Q[state].values())
 
-        # maxQ=0.0
-        # actQ=None
-        # for act in self.valid_actions:
-        #     if self.Q[s_state][act] > maxQ:
-        #         maxQ = self.Q[s_state][act]
-        #         actQ=act
-        
-
-        ## Randomly choose the action with the highest Q value (if unique max Q value, choose it. If several
-        ## actions have the same max Q value, e.g. 0.0, then choose a random one.)
-        maxQ=max(self.Q[s_state].values())
-        actQ=random.choice([act for act, value in self.Q[s_state].items() if value==maxQ])
-
-
-        return actQ, maxQ 
+        return maxQ 
 
 
     def createQ(self, state):
@@ -186,14 +98,11 @@ class LearningAgent(Agent):
         # When learning, check if the 'state' is not in the Q-table
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
-        s_state=self.simplify_state(state)
-        # s_state=state
-
-        if self.learning:
-            if s_state not in self.Q:
-                self.Q[s_state] = dict()
-                for act in self.valid_actions:
-                    self.Q[s_state][act]=0.0
+        if (self.learning == True) and (state not in self.Q.keys()):        
+            state_values = dict()
+            for v in self.valid_actions:
+                state_values[v] = 0.0
+            self.Q[state] = state_values
 
         return
 
@@ -205,7 +114,6 @@ class LearningAgent(Agent):
         # Set the agent state and default action
         self.state = state
         self.next_waypoint = self.planner.next_waypoint()
-        action = None
 
         ########### 
         ## TO DO ##
@@ -213,22 +121,12 @@ class LearningAgent(Agent):
         # When not learning, choose a random action
         # When learning, choose a random action with 'epsilon' probability
         #   Otherwise, choose an action with the highest Q-value for the current state
+        best_actions = Environment.valid_actions
 
-        # When not learning, choose a random action
-        if self.learning == False:
-            action=random.choice(self.valid_actions)
-        else:
-        # When learning:
-            # When a randomly generated number is smaller than current epsilon, 
-            # choose a random action (Exploring)
-            if random.random() < self.epsilon:
-                action=random.choice(self.valid_actions)
-            # Otherwise, strictly follow the Q table by choosing the action with the highest Q sore
-            # (follow what has been learned)
-            else:
-                action, _ = self.get_maxQ(state)
+        if (self.learning == True) and (random.random() > self.epsilon):
+            best_actions = [action for action, q in self.Q[state].iteritems() if q == self.get_maxQ(state)]
  
-        return action
+        return random.choice(best_actions)
 
 
     def learn(self, state, action, reward):
@@ -241,11 +139,8 @@ class LearningAgent(Agent):
         ###########
         # When learning, implement the value iteration update rule
         #   Use only the learning rate 'alpha' (do not use the discount factor 'gamma')
-        if self.learning == True:
-            s_state=self.simplify_state(state)
-            # s_state=state
-
-            self.Q[s_state][action]=(1-self.alpha)*self.Q[s_state][action] + self.alpha*reward
+        if (self.learning == True):
+            self.Q[state][action] = ((1 - self.alpha) * self.Q[state][action]) + (reward * self.alpha)
 
         return
 
@@ -282,13 +177,14 @@ def run():
     #   learning   - set to True to force the driving agent to use Q-learning
     #    * epsilon - continuous value for the exploration factor, default is 1
     #    * alpha   - continuous value for the learning rate, default is 0.5
-    agent = env.create_agent(LearningAgent,learning=True,alpha=0.5)
+    agent = env.create_agent(LearningAgent, learning=True)
     
     ##############
     # Follow the driving agent
     # Flags:
     #   enforce_deadline - set to True to enforce a deadline metric
-    env.set_primary_agent(agent,enforce_deadline=True)
+    env.set_primary_agent(agent, enforce_deadline=True)
+    # env.set_primary_agent(agent)
 
     ##############
     # Create the simulation
@@ -297,14 +193,16 @@ def run():
     #   display      - set to False to disable the GUI if PyGame is enabled
     #   log_metrics  - set to True to log trial and simulation results to /logs
     #   optimized    - set to True to change the default log file name
-    sim = Simulator(env,update_delay=0.01,display=True,log_metrics=True,optimized=True)
+    sim = Simulator(env, update_delay=0.01, log_metrics=True, display=False, optimized=True)
+    # sim = Simulator(env)
     
     ##############
     # Run the simulator
     # Flags:
     #   tolerance  - epsilon tolerance before beginning testing, default is 0.05 
     #   n_test     - discrete number of testing trials to perform, default is 0
-    sim.run(n_test=10)
+    sim.run(n_test=10, tolerance = 0.00001)
+    # sim.run()
 
 
 if __name__ == '__main__':

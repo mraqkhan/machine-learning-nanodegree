@@ -129,7 +129,7 @@ class Simulator(object):
 
             # Flip testing switch
             if not testing:
-                if total_trials > 10: # Must complete minimum 20 training trials
+                if total_trials > 20: # Must complete minimum 20 training trials
                     if a.learning:
                         if a.epsilon < tolerance: # assumes epsilon decays to 0
                             testing = True
@@ -293,7 +293,7 @@ class Simulator(object):
         # Starting new trial
         else:
             a = self.env.primary_agent
-            print "Simulating trial. . . "
+            print "Simulating trial. . .{}".format(trial)
             if a.learning:
                 print "epsilon = {:.4f}; alpha = {:.4f}".format(a.epsilon, a.alpha)
             else:
