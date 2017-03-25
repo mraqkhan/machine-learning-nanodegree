@@ -1,6 +1,6 @@
 ## Stock Price Prediction
 
-In this project, I will build stock price predictors that takes daily trading data over a certain date range as input, and outputs projected estimates for given query dates with the help of different machine learning methods. 
+In this project, we will build stock price predictors that takes daily trading data over a certain date range as input, and outputs projected estimates for given query dates with the help of different machine learning methods. 
 
 ### Install
 
